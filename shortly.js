@@ -74,6 +74,18 @@ app.get('/login', function(req, res) {
   res.render('login');
 });
 
+app.post('/login', function(req, res) {
+  var username = req.body.username;
+  var password = req.body.password;
+  new User({ username: username}).fetch().then(function(found) {
+    if (!found || password !== found.get('password')) {
+      console.log('username or password not found');
+    } else {
+      res.redirect('./index');
+    }
+  });
+});
+
 app.get('/signup', function(req, res) {
   res.render('signup');
 });
