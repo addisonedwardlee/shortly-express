@@ -1,6 +1,7 @@
 var express = require('express');
 var util = require('./lib/utility');
 var partials = require('express-partials');
+var bcrypt = require('bcrypt');
 
 var db = require('./app/config');
 var Users = require('./app/collections/users');
@@ -85,9 +86,11 @@ app.get('/login', function(req, res) {
 app.post('/login', function(req, res) {
   var username = req.body.username;
   var password = req.body.password;
+  var salt = bcrypt.genSaltSync(10);
+  var hash = bcrypt.hashSync(password,salt);
+
   new User({ username: username}).fetch().then(function(found) {
-    if (!found || password !== found.get('password')) {
-      console.log('username or password not found');
+    if (!found || bcrypt.compareSync(found.get('password'), hash)) {
       //append a red bar with incorrect pw/username
       res.redirect('/login');
     } else {
@@ -111,9 +114,10 @@ app.post('/signup', function(req, res)  {
       console.log('user exists already');
       res.send(200);
     } else {
+      var hash = bcrypt.hashSync(password, bcrypt.genSaltSync(10));
       var user = new User({
         username: username,
-        password: password
+        password: hash
       });
 
       user.save().then(function(newUser){
