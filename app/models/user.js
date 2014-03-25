@@ -11,7 +11,6 @@ var User = db.Model.extend({
   },
   initialize: function() {
     this.on('creating', function() {
-      console.log('user model created: ', this);
     });
   }
 });

@@ -17,20 +17,28 @@ app.configure(function() {
   app.use(partials());
   app.use(express.bodyParser())
   app.use(express.static(__dirname + '/public'));
+  app.use(express.cookieParser('chocolate chips'));
+  app.use(express.session());
 });
 
 app.get('/', function(req, res) {
-  res.render('index');
+  util.checkUser(req,res, function(){
+    res.render('./index');
+  });
 });
 
 app.get('/create', function(req, res) {
-  res.render('index');
+  util.checkUser(req,res, function(){
+    res.render('index');
+  });
 });
 
 app.get('/links', function(req, res) {
-  Links.reset().fetch().then(function(links) {
-    res.send(200, links.models);
-  })
+  util.checkUser(req,res, function(){
+    Links.reset().fetch().then(function(links) {
+      res.send(200, links.models);
+    });
+  });
 });
 
 app.post('/links', function(req, res) {
@@ -80,8 +88,13 @@ app.post('/login', function(req, res) {
   new User({ username: username}).fetch().then(function(found) {
     if (!found || password !== found.get('password')) {
       console.log('username or password not found');
+      //append a red bar with incorrect pw/username
+      res.redirect('/login');
     } else {
-      res.redirect('./index');
+      req.session.regenerate(function(){
+        req.session.user = username;
+        res.redirect('/');
+      });
     }
   });
 });
@@ -106,11 +119,21 @@ app.post('/signup', function(req, res)  {
       user.save().then(function(newUser){
         console.log('new user created ' + newUser);
         Users.add(newUser);
-        res.send(200);
+        req.session.regenerate(function(){
+          req.session.user = username;
+          res.redirect('/');
+        });
       });
     }
   });
 });
+
+app.post('/logout', function(req, res) {
+  req.session.destroy(function(){
+    res.redirect('/');
+  });
+});
+
 /************************************************************/
 // Handle the wildcard route last - if all other routes fail
 // assume the route is a short code and try and handle it here.
