@@ -24,7 +24,7 @@ app.configure(function() {
 
 app.get('/', function(req, res) {
   util.checkUser(req,res, function(){
-    res.render('./index');
+    res.render('index');
   });
 });
 
@@ -38,6 +38,22 @@ app.get('/links', function(req, res) {
   util.checkUser(req,res, function(){
     Links.reset().fetch().then(function(links) {
       res.send(200, links.models);
+    });
+  });
+});
+
+app.get('/myLinks', function(req, res) {
+  util.checkUser(req,res, function(){
+    Links.reset().fetch().then(function(links) {
+      var myLinks = [];
+      new User({username: req.session.user}).fetch().then(function(user){
+        links.forEach(function(link){
+          if(link.get('user_id') === user.get('id')){
+            myLinks.push(link);
+          }
+        })
+        res.send(200, myLinks);
+      });
     });
   });
 });
@@ -60,15 +76,19 @@ app.post('/links', function(req, res) {
           return res.send(404);
         }
 
-        var link = new Link({
-          url: uri,
-          title: title,
-          base_url: req.headers.origin
-        });
+        new User({username: req.session.user}).fetch()
+          .then(function(user){
+            var link = new Link({
+              url: uri,
+              title: title,
+              base_url: req.headers.origin,
+              user_id: user.get('id')
+            });
 
         link.save().then(function(newLink) {
           Links.add(newLink);
-          res.send(200, newLink);
+          res.send(200, newLink);            
+          })
         });
       });
     }
@@ -132,7 +152,7 @@ app.post('/signup', function(req, res)  {
   });
 });
 
-app.post('/logout', function(req, res) {
+app.get('/logout', function(req, res) {
   req.session.destroy(function(){
     res.redirect('/');
   });
